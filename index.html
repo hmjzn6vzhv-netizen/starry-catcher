@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Starry Catcher: Super Kawaii Deluxe</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            touch-action: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050409;
+            font-family: 'Press Start 2P', monospace;
+            color: #fff;
+        }
+
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 4, 9, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: opacity 0.4s ease;
+            text-align: center;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes titleFloat {
+            0%, 100% { transform: translateY(0px); text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 3px 3px 0 #ff007f; }
+            50% { transform: translateY(-8px); text-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 3px 6px 0 #00f5ff; }
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #ffd700;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            line-height: 1.3;
+            animation: titleFloat 4s ease-in-out infinite;
+        }
+
+        @keyframes pulseNeon {
+            0%, 100% { color: #00f5ff; }
+            50% { color: #ff007f; }
+        }
+
+        h2 {
+            font-size: 10px;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            animation: pulseNeon 3s infinite;
+        }
+
+        button {
+            font-family: 'Press Start 2P', monospace;
+            padding: 16px 32px;
+            font-size: 11px;
+            border: 3px solid #fff;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #7928ca, #ff007f);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #3b1154, 0 0 20px rgba(255, 0, 127, 0.4);
+            transition: transform 0.1s ease;
+            margin: 10px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #3b1154;
+        }
+
+        .grid-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .diff-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .option-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 3px solid #251b3d;
+            border-radius: 12px;
+            padding: 12px 5px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, border-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .option-card.selected {
+            border-color: #39ff14;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.5);
+            background: rgba(57, 255, 20, 0.1);
+        }
+
+        .preview-box {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .option-label {
+            font-size: 8px;
+            line-height: 1.2;
+            font-weight: bold;
+        }
+
+        #score-banner {
+            font-size: 9px;
+            color: #a29bfe;
+            margin-top: 10px;
+        }
+
+        @media (min-width: 600px) {
+            h1 { font-size: 42px; }
+            h2 { font-size: 13px; }
+            .grid-options { grid-template-columns: repeat(3, 1fr); max-width: 580px; }
+            .option-card { padding: 18px 10px; }
+            .preview-box { font-size: 34px; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="menu-screen" class="overlay-screen">
+        <h1>STARRY<br>CATCHER</h1>
+        <h2>SUPER KAWAII DELUXE</h2>
+        <button onclick="showCustomization()">SCEGLI EROE</button>
+        <div id="score-banner">BEST RUN: <span id="high-score-val">0</span></div>
+    </div>
+
+    <div id="custom-screen" class="overlay-screen hidden">
+        <h2>SCEGLI IL TUO CUCCIOLO</h2>
+        <div class="grid-options">
+            <div class="option-card selected" onclick="setSkin('classic', this)">
+                <div class="preview-box">🧺</div>
+                <div class="option-label">SUPER SLIME</div>
+            </div>
+            <div class="option-card" onclick="setSkin('cyber', this)">
+                <div class="preview-box">🐱</div>
+                <div class="option-label">CYBER NEKO</div>
+            </div>
+            <div class="option-card" onclick="setSkin('spooky', this)">
+                <div class="preview-box">🎃</div>
+                <div class="option-label">RE ZUCCA</div>
+            </div>
+            <div class="option-card" onclick="setSkin('bunny', this)">
+                <div class="preview-box">🐰</div>
+                <div class="option-label">ANGEL BUNNY</div>
+            </div>
+            <div class="option-card" onclick="setSkin('ufo', this)">
+                <div class="preview-box">🛸</div>
+                <div class="option-label">COSMO UFO</div>
+            </div>
+            <div class="option-card" onclick="setSkin('donut', this)">
+                <div class="preview-box">🍩</div>
+                <div class="option-label">LIQUID DONUT</div>
+            </div>
+        </div>
+
+        <h2>DIFFICOLTÀ</h2>
+        <div class="diff-options">
+            <div class="option-card selected" style="flex:1;" onclick="setDifficulty('facile', this)">
+                <div class="option-label">RELAX</div>
+            </div>
+            <div class="option-card" style="flex:1;" onclick="setDifficulty('normale', this)">
+                <div class="option-label">ARCADE</div>
+            </div>
+            <div class="option-card" style="flex:1;" onclick="setDifficulty('difficile', this)">
+                <div class="option-label">HARDCORE</div>
+            </div>
+        </div>
+
+        <button onclick="launchGame()">GIOCA ORA 💕</button>
+    </div>
+
+    <div id="game-over-screen" class="overlay-screen hidden">
+        <h1 style="color: #ff7675;">OH NOU!</h1>
+        <h2>PUNTI: <span id="final-score" style="color:#ffd700;">0</span></h2>
+        <button onclick="backToMenu()">RIPROVA</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menuScreen = document.getElementById('menu-screen');
+        const customScreen = document.getElementById('custom-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+
+        let chosenSkin = 'classic';
+        let chosenDifficulty = 'facile';
+        let highScore = localStorage.getItem('hyper_highscore') || 0;
+        document.getElementById('high-score-val').textContent = highScore;
+
+        let score = 0, lives = 3, isPlaying = false, scoreBounce = 0;
+        let player = { x: 0, y: 0, width: 100, height: 75, targetX: 0, tilt: 0, animTime: 0, speedX: 0 };
+        let stars = [], particles = [], backgroundStars = [], mountains = [], nebulaTime = 0;
+        let starSpeedBase = 3, spawnRate = 1000, lastSpawnTime = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            if(canvas.width < 600) { player.width = 85; player.height = 65; } 
+            else { player.width = 110; player.height = 85; }
+            player.y = canvas.height - player.height - 40;
+            generateMountains();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function generateMountains() {
+            mountains = []; let pointsCount = 15; let step = canvas.width / (pointsCount - 1);
+            let l1 = [], l2 = [];
+            for(let i=0; i<pointsCount; i++) l1.push({x: i * step, y: canvas.height - 140 - Math.random() * 60});
+            for(let i=0; i<pointsCount; i++) l2.push({x: i * step, y: canvas.height - 90 - Math.random() * 40});
+            mountains.push({ points: l1, color: '#0b0818', speed: 0.2 }, { points: l2, color: '#130e2e', speed: 0.5 });
+        }
+
+        function generateStars() {
+            backgroundStars = [];
+            let count = canvas.width < 600 ? 40 : 80;
+            for (let i = 0; i < count; i++) backgroundStars.push({ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight, size: Math.random() * 3, pulseSpeed: 0.03 + Math.random() * 0.04, phase: Math.random() * Math.PI });
+        }
+
+        function showCustomization() { menuScreen.classList.add('hidden'); customScreen.classList.remove('hidden'); }
+        function setSkin(skin, el) { document.querySelectorAll('.grid-options .option-card').forEach(c => c.classList.remove('selected')); el.classList.add('selected'); chosenSkin = skin; }
+        function setDifficulty(diff, el) { document.querySelectorAll('.diff-options .option-card').forEach(c => c.classList.remove('selected')); el.classList.add('selected'); chosenDifficulty = diff; }
+
+        function launchGame() {
+            customScreen.classList.add('hidden');
+            if(chosenDifficulty === 'facile') { lives = 5; starSpeedBase = 3.5; spawnRate = 1100; }
+            else if(chosenDifficulty === 'normale') { lives = 3; starSpeedBase = 5.5; spawnRate = 800; }
+            else { lives = 2; starSpeedBase = 8.5; spawnRate = 500; }
+            score = 0; stars = []; particles = []; isPlaying = true; lastSpawnTime = performance.now();
+            player.x = canvas.width / 2 - player.width / 2; player.targetX = player.x;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function backToMenu() {
+            gameOverScreen.classList.add('hidden'); menuScreen.classList.remove('hidden');
+            document.getElementById('high-score-val').textContent = highScore;
+            requestAnimationFrame(menuAnimation);
+        }
+
+        function handleInput(clientX) {
+            if(!isPlaying) return;
+            player.targetX = clientX - player.width / 2;
+            if(player.targetX < 0) player.targetX = 0;
+            if(player.targetX > canvas.width - player.width) player.targetX = canvas.width - player.width;
+        }
+
+        window.addEventListener('mousemove', (e) => handleInput(e.clientX));
+        window.addEventListener('touchmove', (e) => { handleInput(e.touches[0].clientX); }, { passive: false });
+        window.addEventListener('touchstart', (e) => { handleInput(e.touches[0].clientX); }, { passive: false });
+
+        function spawnStar() {
+            let size = canvas.width < 600 ? 28 : 34;
+            stars.push({ x: Math.random() * (canvas.width - 60) + 30, y: -60, size: size, angle: Math.random() * Math.PI, rotSpeed: 0.04 + Math.random() * 0.04, speed: starSpeedBase + Math.random() * 2, hue: Math.random() * 360 });
+        }
+
+        function createExplosion(x, y, color) {
+            let pCount = canvas.width < 600 ? 15 : 25;
+            for(let i=0; i<pCount; i++) {
+                let ang = Math.random() * Math.PI * 2; let spd = Math.random() * 6 + 3;
+                particles.push({ x: x, y: y, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, radius: Math.random() * 4 + 1, alpha: 1, decay: 0.02 + Math.random() * 0.02, color: color });
+            }
+        }
+
+        function drawBackground() {
+            nebulaTime += 0.003;
+            let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#030106'); bgGrad.addColorStop(0.5 + Math.sin(nebulaTime)*0.06, '#080515'); bgGrad.addColorStop(1, '#110b27');
+            ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            backgroundStars.forEach(bs => {
+                bs.phase += bs.pulseSpeed;
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.15 + Math.abs(Math.sin(bs.phase)) * 0.8})`;
+                ctx.beginPath(); ctx.arc(bs.x, bs.y, bs.size * (0.6 + Math.abs(Math.sin(bs.phase))*0.5), 0, Math.PI*2); ctx.fill();
+            });
+
+            mountains.forEach(m => {
+                ctx.fillStyle = m.color; ctx.beginPath(); ctx.moveTo(0, canvas.height);
+                m.points.forEach(p => { p.x -= m.speed; if(p.x < -50) p.x = canvas.width + 50; ctx.lineTo(p.x, p.y); });
+                ctx.lineTo(canvas.width, canvas.height); ctx.closePath(); ctx.fill();
+            });
+        }
+
+        function drawKawaiiEyes(x, y, spacing, eyeSize, lookX, blink) {
+            ctx.fillStyle = '#1e272e';
+            if (blink) {
+                ctx.strokeStyle = '#1e272e'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.arc(x - spacing + lookX, y, eyeSize, Math.PI, 0, true); ctx.stroke();
+                ctx.beginPath(); ctx.arc(x + spacing + lookX, y, eyeSize, Math.PI, 0, true); ctx.stroke();
+            } else {
+                ctx.beginPath(); ctx.arc(x - spacing + lookX, y, eyeSize, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x + spacing + lookX, y, eyeSize, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(x - spacing + lookX + eyeSize/3, y - eyeSize/3, eyeSize/3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x + spacing + lookX + eyeSize/3, y - eyeSize/3, eyeSize/3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x - spacing + lookX - eyeSize/4, y + eyeSize/4, eyeSize/5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(x + spacing + lookX - eyeSize/4, y + eyeSize/4, eyeSize/5, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+
+        function drawPlayer() {
+            player.animTime += 0.14;
+            ctx.save();
+            ctx.translate(player.x + player.width/2, player.y + player.height/2);
+            ctx.rotate(player.tilt);
+
+            let bounceY = Math.sin(player.animTime) * 4;
+            let squishX = 1 + Math.cos(player.animTime) * 0.04 - Math.abs(player.speedX) * 0.004;
+            let squishY = 1 - Math.sin(player.animTime) * 0.04 + Math.abs(player.speedX) * 0.004;
+            ctx.scale(squishX, squishY);
+
+            let lookX = player.tilt * 14;
+            let rad = player.width / 2.2;
+            let isBlinking = Math.sin(player.animTime * 0.4) > 0.92;
+
+            function drawBlush(y) {
+                ctx.fillStyle = 'rgba(255, 107, 129, 0.6)';
+                ctx.beginPath(); ctx.arc(-rad/1.4 + lookX, y + bounceY, 8, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(rad/1.4 + lookX, y + bounceY, 8, 0, Math.PI*2); ctx.fill();
+            }
+
+            if(chosenSkin === 'classic') {
+                let g = ctx.createLinearGradient(-rad, -rad, rad, rad); g.addColorStop(0, '#a29bfe'); g.addColorStop(1, '#6c5ce7');
+                ctx.fillStyle = g; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.roundRect(-rad, -rad + bounceY, rad*2, rad*1.7 - bounceY, [15, 15, 25, 25]); ctx.fill(); ctx.stroke();
+                
+                ctx.fillStyle = '#ffd700'; ctx.beginPath();
+                ctx.moveTo(-15+lookX, -rad-2+bounceY); ctx.lineTo(-20+lookX, -rad-15+bounceY); ctx.lineTo(-7+lookX, -rad-8+bounceY);
+                ctx.lineTo(0+lookX, -rad-22+bounceY); ctx.lineTo(7+lookX, -rad-8+bounceY); ctx.lineTo(20+lookX, -rad-15+bounceY);
+                ctx.lineTo(15+lookX, -rad-2+bounceY); ctx.closePath(); ctx.fill();
+
+                drawBlush(-2); drawKawaiiEyes(0, -4 + bounceY, 18, 7, lookX, isBlinking);
+                ctx.strokeStyle = '#1e272e'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.arc(-3 + lookX, 5 + bounceY, 3, 0, Math.PI); ctx.stroke();
+                ctx.beginPath(); ctx.arc(3 + lookX, 5 + bounceY, 3, 0, Math.PI); ctx.stroke();
+            } 
+            else if(chosenSkin === 'cyber') {
+                ctx.shadowBlur = 15; ctx.shadowColor = '#00f5ff';
+                ctx.fillStyle = '#1e272e'; ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.roundRect(-rad, -rad+10 + bounceY, rad*2, rad*1.5, 12); ctx.fill(); ctx.stroke();
+                
+                ctx.fillStyle = '#ff007f'; ctx.beginPath(); 
+                ctx.moveTo(-rad+6, -rad+12+bounceY); ctx.lineTo(-rad+22, -rad+26+bounceY); ctx.lineTo(-rad+4, -rad+26+bounceY); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(rad-6, -rad+12+bounceY); ctx.lineTo(rad-22, -rad+26+bounceY); ctx.lineTo(rad-4, -rad+26+bounceY); ctx.fill();
+
+                drawBlush(10); drawKawaiiEyes(0, 4 + bounceY, 16, 6, lookX, isBlinking);
+                
+                ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(-rad+4, 10+bounceY); ctx.lineTo(-rad-8, 8+bounceY); ctx.moveTo(-rad+4, 15+bounceY); ctx.lineTo(-rad-8, 16+bounceY);
+                ctx.moveTo(rad-4, 10+bounceY); ctx.lineTo(rad+8, 8+bounceY); ctx.moveTo(rad-4, 15+bounceY); ctx.lineTo(rad+8, 16+bounceY); ctx.stroke();
+
+                ctx.strokeStyle = '#ff007f'; ctx.lineWidth = 2.5;
+                ctx.beginPath(); ctx.moveTo(-3+lookX, 12+bounceY); ctx.lineTo(lookX, 15+bounceY); ctx.lineTo(3+lookX, 12+bounceY); ctx.stroke();
+            } 
+            else if(chosenSkin === 'spooky') {
+                let pGrad = ctx.createRadialGradient(lookX, bounceY, 5, lookX, bounceY, rad); pGrad.addColorStop(0, '#ffbe76'); pGrad.addColorStop(1, '#de7119');
+                ctx.fillStyle = pGrad; ctx.strokeStyle = '#1e272e'; ctx.lineWidth = 3; ctx.shadowBlur = 12; ctx.shadowColor = '#de7119';
+                ctx.beginPath(); ctx.arc(lookX, bounceY, rad, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                
+                ctx.fillStyle = '#4cd137'; ctx.beginPath();
+                ctx.quadraticCurveTo(lookX, -rad-12+bounceY, lookX+8, -rad-15+bounceY); ctx.lineTo(lookX+4, -rad+bounceY); ctx.closePath(); ctx.fill();
+
+                drawBlush(-4); drawKawaiiEyes(lookX, -6 + bounceY, 15, 6, 0, isBlinking);
+                ctx.fillStyle = '#fff200'; ctx.beginPath(); ctx.arc(lookX, 6 + bounceY, 10, 0, Math.PI); ctx.closePath(); ctx.fill();
+            }
+            else if(chosenSkin === 'bunny') {
+                ctx.fillStyle = '#f5f6fa'; ctx.strokeStyle = '#718093'; ctx.lineWidth = 3;
+                
+                ctx.save(); ctx.translate(-rad+12, -rad+15+bounceY); ctx.rotate(-0.2 - player.tilt*0.4);
+                ctx.beginPath(); ctx.roundRect(-8, -35, 16, 40, [10, 10, 5, 5]); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#ff78ab'; ctx.beginPath(); ctx.roundRect(-4, -30, 8, 30, [8, 8, 3, 3]); ctx.fill(); ctx.restore();
+
+                ctx.fillStyle = '#f5f6fa';
+                ctx.save(); ctx.translate(rad-12, -rad+15+bounceY); ctx.rotate(0.3 - player.tilt*0.4);
+                ctx.beginPath(); ctx.roundRect(-8, -35, 16, 40, [10, 10, 5, 5]); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#ff78ab'; ctx.beginPath(); ctx.roundRect(-4, -30, 8, 30, [8, 8, 3, 3]); ctx.fill(); ctx.restore();
+
+                ctx.fillStyle = '#f5f6fa'; ctx.strokeStyle = '#718093'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.roundRect(-rad, -rad+10 + bounceY, rad*2, rad*1.5, 22); ctx.fill(); ctx.stroke();
+                
+                ctx.fillStyle = '#f5f6fa'; ctx.beginPath();
+                ctx.arc(-rad+14, rad/2+10+bounceY, 7, 0, Math.PI*2); ctx.arc(rad-14, rad/2+10+bounceY, 7, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+                drawBlush(6); drawKawaiiEyes(0, 0 + bounceY, 15, 6.5, lookX, isBlinking);
+                
+                ctx.fillStyle = '#ff78ab'; ctx.beginPath();
+                ctx.moveTo(lookX, 5+bounceY); ctx.lineTo(-3+lookX, 2+bounceY); ctx.lineTo(3+lookX, 2+bounceY); ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = '#2f3640'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+                ctx.beginPath(); ctx.arc(-2.5 + lookX, 7 + bounceY, 3, 0, Math.PI); ctx.stroke();
+                ctx.beginPath(); ctx.arc(2.5 + lookX, 7 + bounceY, 3, 0, Math.PI); ctx.stroke();
+            }
+            else if(chosenSkin === 'ufo') {
+                let beamG = ctx.createLinearGradient(0, 10, 0, 50); beamG.addColorStop(0, 'rgba(0, 245, 255, 0.4)'); beamG.addColorStop(1, 'rgba(0, 245, 255, 0)');
+                ctx.fillStyle = beamG; ctx.beginPath(); ctx.moveTo(-rad, 10+bounceY); ctx.lineTo(-rad-10, 50); ctx.lineTo(rad+10, 50); ctx.lineTo(rad, 10+bounceY); ctx.closePath(); ctx.fill();
+                ctx.fillStyle = 'rgba(0, 245, 255, 0.2)'; ctx.strokeStyle = '#00f5ff'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(0, bounceY, rad/1.2, Math.PI, 0); ctx.fill(); ctx.stroke();
+                
+                ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(lookX, -rad+5+bounceY); ctx.lineTo(lookX, -rad-12+bounceY); ctx.stroke();
+                ctx.fillStyle = '#ff007f'; ctx.beginPath(); ctx.arc(lookX, -rad-15+bounceY, 5, 0, Math.PI*2); ctx.fill();
+
+                ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.ellipse(0, 10 + bounceY, rad*1.3, 10, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                
+                ctx.fillStyle = '#4cd137'; ctx.beginPath(); ctx.arc(lookX, -4+bounceY, 14, 0, Math.PI*2); ctx.fill();
+                drawBlush(-4); drawKawaiiEyes(0, -5 + bounceY, 6, 3.5, lookX, isBlinking);
+                ctx.strokeStyle = '#1e272e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(lookX, 0+bounceY, 2, 0, Math.PI); ctx.stroke();
+            }
+            else if(chosenSkin === 'donut') {
+                ctx.fillStyle = '#f5cd79'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(0, bounceY, rad, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#ff78ab'; ctx.beginPath(); ctx.arc(0, bounceY, rad-4, 0, Math.PI*2); ctx.fill();
+                
+                ctx.fillStyle = '#00f5ff'; ctx.fillRect(-rad+12, -6+bounceY, 6, 3); ctx.fillStyle = '#ffd700'; ctx.fillRect(rad-18, -12+bounceY, 3, 6);
+                
+                ctx.fillStyle = '#050409'; ctx.save(); ctx.globalCompositeOperation = 'destination-out';
+                ctx.beginPath(); ctx.arc(0, bounceY, rad/3, 0, Math.PI*2); ctx.fill(); ctx.restore();
+                ctx.strokeStyle = '#e67e22'; ctx.beginPath(); ctx.arc(0, bounceY, rad/3, 0, Math.PI*2); ctx.stroke();
+
+                drawBlush(-12); drawKawaiiEyes(0, -14 + bounceY, 15, 5, lookX, isBlinking);
+                ctx.fillStyle = '#2f3640'; ctx.beginPath(); ctx.arc(lookX + 2, -6 + bounceY, 3, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawStar(s) {
+            ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.angle);
+            let trail = ctx.createLinearGradient(0, 0, 0, 45);
+            trail.addColorStop(0, `hsla(${s.hue}, 100%, 65%, 0.6)`); trail.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = trail; ctx.fillRect(-s.size/5, 0, s.size/2.5, 45);
+            ctx.shadowBlur = 15; ctx.shadowColor = `hsl(${s.hue}, 100%, 50%)`;
+            ctx.fillStyle = `hsl(${s.hue}, 100%, 65%)`;
+            ctx.beginPath();
+            let spikes = 5, outer = s.size/2, inner = s.size/4, rot = Math.PI/2*3, step = Math.PI/spikes;
+            for (let i = 0; i < spikes; i++) {
+                ctx.lineTo(Math.cos(rot)*outer, Math.sin(rot)*outer); rot += step;
+                ctx.lineTo(Math.cos(rot)*inner, Math.sin(rot)*inner); rot += step;
+            }
+            ctx.closePath(); ctx.fill(); ctx.restore();
+        }
+
+        function gameLoop(currentTime) {
+            if (!isPlaying) return;
+
+            let oldX = player.x;
+            player.x += (player.targetX - player.x) * 0.2;
+            player.speedX = player.x - oldX;
+            player.tilt = player.speedX * 0.018; 
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+
+            if (currentTime - lastSpawnTime > spawnRate) {
+                spawnStar(); lastSpawnTime = currentTime;
+                starSpeedBase += 0.05;
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i]; p.x += p.vx; p.y += p.vy; p.alpha -= p.decay;
+                if(p.alpha <= 0) particles.splice(i, 1);
+                else {
+                    ctx.save(); ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2); ctx.fill(); ctx.restore();
+                }
+            }
+
+            for (let i = stars.length - 1; i >= 0; i--) {
+                let s = stars[i]; s.y += s.speed; s.angle += s.rotSpeed;
+                drawStar(s);
+
+                if (s.y + s.size/2 >= player.y && s.y - s.size/2 <= player.y + player.height && s.x + s.size/2 >= player.x && s.x - s.size/2 <= player.x + player.width) {
+                    createExplosion(s.x, s.y, `hsl(${s.hue}, 100%, 65%)`);
+                    stars.splice(i, 1); score += 20; scoreBounce = 10; continue;
+                }
+                if (s.y - s.size > canvas.height) { stars.splice(i, 1); lives--; if(lives <= 0) triggerGameOver(); }
+            }
+
+            drawPlayer();
+
+            let hudFontSize = canvas.width < 600 ? '10px' : '14px';
+            if(scoreBounce > 0) scoreBounce -= 1;
+            let sizeMod = 1 + (scoreBounce / 25);
+            
+            ctx.save();
+            ctx.translate(canvas.width < 600 ? 20 : 40, 40); ctx.scale(sizeMod, sizeMod);
+            ctx.fillStyle = '#39ff14'; ctx.font = `${hudFontSize} "Press Start 2P"`; ctx.shadowBlur = 5; ctx.shadowColor = '#39ff14';
+            ctx.fillText(`SCORE: ${score}`, 0, 0);
+            ctx.restore();
+
+            ctx.fillStyle = '#ff007f'; ctx.shadowColor = '#ff007f'; ctx.font = `${hudFontSize} "Press Start 2P"`;
+            let liveText = canvas.width < 600 ? `HP:${'❤️'.repeat(lives)}` : `LIVES: ${'❤️'.repeat(lives)}`;
+            ctx.fillText(liveText, canvas.width - (canvas.width < 600 ? 120 : 260), 40);
+            ctx.shadowBlur = 0;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function triggerGameOver() {
+            isPlaying = false;
+            if(score > highScore) { highScore = score; localStorage.setItem('hyper_highscore', highScore); }
+            document.getElementById('final-score').textContent = score;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        resizeCanvas(); generateStars();
+        function menuAnimation() { if(!isPlaying) { ctx.clearRect(0,0,canvas.width,canvas.height); drawBackground(); requestAnimationFrame(menuAnimation); } }
+        menuAnimation();
+    </script>
+</body>
+</html>
